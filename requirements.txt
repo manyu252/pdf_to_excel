@@ -1,0 +1,5 @@
+flask
+Werkzeug
+pandas
+json
+PyMuPDF

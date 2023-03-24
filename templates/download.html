@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download File</title>
+</head>
+<body>
+    <h1>Download File</h1>
+    <p>Click the button below to download the file:</p>
+    <form action="/download/{{ filename }}">
+        <button type="submit">Download {{ filename }}</button>
+    </form>
+    <br>
+    <form action="/" method="get">
+      <button type="submit">Home</button>
+    </form>
+</body>
+</html>

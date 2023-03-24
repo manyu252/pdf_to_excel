@@ -1,0 +1,139 @@
+{
+    "DEPOSIT":
+    {
+        "VISA/MC":
+        [
+            "DEPOSIT PAYMENTECH",
+            "AC-PAYMENTECH-DEPOSIT",
+            "Bank of America Deposit",
+            "SETTLEMENT DISCOVER NETWORK",
+            "INTCHG ADJ FISERV MERCHANT",
+            "MERCH DEP MERCHANT SERVICES",
+            "MTOT DEP BANKCARD-1084",
+            "PYMT PROC SHIFT4",
+            "Paymentech Deposit",
+            "Fiserv Merchant Deposit",
+            "DEPOSIT FISERV MERCHANT",
+            "DEPOSIT BANK OF AMERICA"
+        ],
+        "VISA/MC/DS Restaurant": 
+        [
+            "DEPOSIT PAYMENTECH"
+        ],
+        "CASH":
+        [
+            "DEPOSIT",
+            "Customer Deposit"
+        ],
+        "CLC":
+        [
+            "DLY QPY CR CORP LODG CON 3",
+            "Corp Lodg Con 3 Dly Qpy Cr"
+        ],
+        "LOAN":
+        [
+            "Trsf from VISHNU PATEL",
+            "Transfer from x5429 to",
+            "Loan From Owner",
+            "Transfer from x5522 to",
+            "TRUIST ONLINE TRANSFER FROM ****9250",
+            "(Some Number) Business Banking Transfer From (Some Number)"
+        ],
+        "AEX":
+        [
+            "SETTLEMENT AMERICAN EXPRESS",
+            "American Express Settlement"
+        ],
+        "CHARGEBACK":
+        [
+            "CHARGEBACK PAYMENTECH",
+            "Paymentech Chargeback",
+            "Fiserv Merchant Chargeback",
+            "CHARGEBACK FISERV MERCHANT",
+            "MERCH CHBK MERCHANT SERVICE"
+        ],
+        "DISCOVER":
+        [
+            "SETTLEMENT DISCOVER NETWORK",
+            "Discover Network Settlement"
+        ],
+        "EXPEDIA":
+        [
+            "(Some Number) TRAVELSCAPE, LLC"
+        ],
+        "OTHER AMOUNTS":[],
+        "OTHER VENDORS":[]
+    },
+    "WITHDRAWAL":
+    {
+        "AEX":
+        [
+            "CHGBCK/ADJ AMERICAN EXPRESS",
+            "AXP DISCNT AMERICAN EXPRESS",
+            "ACH CORP DEBIT CHGBCK/ADJ AMERICAN EXPRESS",
+            "ACH CORP DEBIT AXP DISCNT AMERICAN EXPRESS",
+            "ACH CORP DEBIT COLLECCTION AMERICAN EXPRESS",
+            "American Express Axp Discnt",
+            "American Express Chgbck/Adj",
+            "COLLECTION AMERICAN EXPRESS"
+        ],
+        "V/MC/Disc":
+        [
+            "MERCH FEE MERCHANT SERVICES",
+            "FEE PAYMENTECH",
+            "ACH CORP DEBIT FEES SHIFT4",
+            "CORP COLL MERCHANT LINK LLC",
+            "ACH CORP DEBIT DEPOSIT FISERV MERCHANT",
+            "FOR INTCHG FISERV MERCHANT",
+            "VINWRKCP FISERV MERCHANT",
+            "MCLOC FISERV MERCHANT",
+            "ACH CORP DEBIT FEE PAYMENTECH",
+            "DIMFEMCDMS FISERV MERCHANT",
+            "DFEMCDMS FISERV MERCHANT",
+            "MCCLCFEE FISERV MERCHANT",
+            "MCDTL FISERV MERCHANT",
+            "MCUND FISERV MERCHANT",
+            "DISCOUNT BANK OF AMERICA",
+            "FEE BANK OF AMERICA",
+            "INTERCHNG BANK OF AMERICA",
+            "DISCOUNT FISERV MERCHANT",
+            "DEBIT MERCDATA",
+            "FEE FISERV MERCHANT",
+            "INTERCHNG FISERV MERCHANT",
+            "VIINTEGFEE FISERV MERCHANT",
+            "VINVRAPPR FISERV MERCHANT",
+            "Fiserv Merchant Discount",
+            "MTOT DISC BANKCARD-1084",
+            "Fiserv Merchant Fee",
+            "Fiserv Merchant Interchng",
+            "Paymentech Fee",
+            "AC-PAYMENTECH-FEE",
+            "FEES SHIFT4"
+        ],
+        "CLC":
+        [
+            "WEK DRF DB CORP LODG CON 4",
+            "Corp Lodg Con 4 Wek Drf Db",
+            "ACH CORP DEBIT WEK DRF DB CORP LODG CON 4",
+            "MCES DB CORP LODG CON 5"
+        ],
+        "DISCOVER":
+        [
+            "SETTLEMENT DISCOVER NETWORK"
+        ],
+        "CHARGEBACK":
+        [
+            "CHARGEBACK PAYMENTECH",
+            "CHARGEBACK BANK OF AMERICA",
+            "Paymentech Chargeback",
+            "ACH CORP DEBIT CHG BACKS SHIFT4",
+            "CHARGEBACK FISERV MERCHANT",
+            "CHG BACKS SHIFT 4",
+            "MERCH CHBK MERCHANT SERVICE",
+            "ACH CORP DEBIT CHARGEBACK PAYMENTECH",
+            "Fiserv Merchant Chargeback"
+        ],
+        "OTHER AMOUNTS":[],
+        "OTHER VENDORS":[]
+    }
+}
