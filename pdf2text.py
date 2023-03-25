@@ -4,10 +4,17 @@ import json
 from flask import Flask, render_template, request, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 
+if os.name == 'nt':
+    slash = '\\'  # Windows
+    python = 'python'
+else:
+    slash = '/'  # Linux
+    python = 'python3'
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'pdf'}
-UPLOAD_FOLDER = os.getcwd() + '/uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -18,7 +25,7 @@ withdrawal_search_keyword = "WITHDRAWAL"
 # write a function to convert pdf to text using pymupdf with input as a pdf file 
 # and output as a text file with the gettext() method
 def pdf_to_text(input_file):
-    cmd = "python3 -m fitz gettext -output tmp.txt " + input_file
+    cmd = python + " -m fitz gettext -output tmp.txt \"" + input_file + "\""
     os.system(cmd)
     # print(f"Text saved to tmp.txt.")
 
@@ -93,7 +100,6 @@ def convert_A(output_file):
                 continue
 
     file.close()
-    os.system("rm tmp.txt")
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
@@ -139,6 +145,35 @@ def read_json(filename):
         exit(1)
     return json_data
 
+def rem():
+    try:
+        os.remove("tmp.txt")
+    except:
+        print("Error while deleting file : tmp.txt")
+        pass
+
+    dir = os.getcwd()
+    test = os.listdir(dir)
+    try:
+        for item in test:
+            if item.endswith(".xlsx"):
+                path = os.path.join(dir, item)
+                os.remove(path)
+    except:
+        print("Error while deleting file : ", item)
+        pass
+
+    try:
+        dir = UPLOAD_FOLDER
+        test = os.listdir(dir)
+        for item in test:
+            if item.endswith(".pdf"):
+                path = os.path.join(dir, item)
+                os.remove(path)
+    except:
+        print("Error while deleting file : ", item)
+        pass
+
 # Define a function to check if a file has an allowed extension
 def allowed_file(filename):
     return '.' in filename and \
@@ -146,8 +181,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def home():
-    os.system('rm -rf *.xlsx')
-    os.system('rm -rf uploads/*.pdf')
+    rem()
     return render_template('index.html')
 
 # Define the route for the upload page
@@ -166,9 +200,9 @@ def upload_file():
             filename = secure_filename(file.filename)
             # Save the file to the upload directory
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            to_convert_filename = UPLOAD_FOLDER + '/' + filename
+            to_convert_filename = os.path.join(UPLOAD_FOLDER, filename)
             pdf_to_text(to_convert_filename)
-            output_file = to_convert_filename.split("/")[-1].split(".pdf")[0] + ".xlsx"
+            output_file = to_convert_filename.split(slash)[-1].split(".pdf")[0] + ".xlsx"
             ret, msg = convert_A(output_file)
             return render_template('download.html', filename=output_file)
         else:
