@@ -51,6 +51,10 @@ def convert_A(output_file):
     lines = file.readlines()
 
     for i, line in enumerate(lines):
+        check_paymentech = ' '.join(line.split())
+        if check_paymentech.lower() == "account title: sunrise hospitality, llc":
+            columns_json[deposit_search_keyword]["VISA/MC"].remove("DEPOSIT PAYMENTECH")
+
         if deposit_search_keyword in line:
             try:
                 value = line.split(deposit_search_keyword)[-1].strip()
@@ -65,9 +69,16 @@ def convert_A(output_file):
                     next_line = lines[i+1]
                     next_line = ' '.join(next_line.split())
 
-                key = [k for k, v in enumerate(list(columns_json['DEPOSIT'].values())) if next_line in v]
-                if len(key) > 0:
-                    deposit_json[list(columns_json['DEPOSIT'].keys())[key[0]]].append(value)
+                key = None
+                for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                    if key is not None:
+                        break
+                    for i in v:
+                        if i in next_line:
+                            key = k
+                            break
+                if key is not None:
+                    deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(value)
                 else:
                     deposit_json["OTHER AMOUNTS"].append(value)
                     deposit_json["OTHER VENDORS"].append(next_line)
@@ -89,9 +100,16 @@ def convert_A(output_file):
                     next_line = lines[i+1]
                     next_line = ' '.join(next_line.split())
 
-                key = [k for k, v in enumerate(list(columns_json['WITHDRAWAL'].values())) if next_line in v]
-                if len(key) > 0:
-                    withdrawal_json[list(columns_json['WITHDRAWAL'].keys())[key[0]]].append(value)
+                key = None
+                for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                    if key is not None:
+                        break
+                    for i in v:
+                        if i in next_line:
+                            key = k
+                            break
+                if key is not None:
+                    withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(value)
                 else:
                     withdrawal_json["OTHER AMOUNTS"].append(value)
                     withdrawal_json["OTHER VENDORS"].append(next_line)
