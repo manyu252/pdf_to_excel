@@ -52,10 +52,133 @@ def remove_date(line):
     for ind in range(len(line)):
         if line[ind].isalpha():
             break
-        if line[ind].isnumeric() or line[ind].isspace():
+        if line[ind].isnumeric() or line[ind].isspace() or line[ind] == '/':
             updated_line = updated_line[1:]
     return updated_line
 
+def check_withdrawal(line):
+    ind = len(line) - 2
+    if line[ind] == '-':
+        if line[ind-1].isnumeric():
+            if line[ind-3] == '.':
+                return True, 0
+    elif line[ind].isnumeric():
+                return False, 0
+    return False, -1
+
+def convert_B(output_file):
+    status = 200
+    try:
+        columns_json = read_json("columns.json")
+    except Exception as e:
+        status = 404
+        return status, "Error in reading columns.json file."
+
+    deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
+    withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+    loan_lines = []
+
+    try:
+        file = open("tmp.txt", 'r')
+    except FileNotFoundError:
+        status = 404
+        return status, "PDF to text converted file not found."
+
+    lines = file.readlines()
+
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        stored_line = line
+        updated_line = remove_last_digits(stored_line)
+        updated_line = remove_date(updated_line)
+
+        account_name = ' '.join(updated_line.split())
+        if account_name == '':
+            continue
+
+        for val in loan_list:
+            if val in account_name:
+                try:
+                    value = lines[i].split(account_name)[-1].strip()
+                    value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
+                    deposit_json["LOAN"].append(value)
+                    loan_lines.append(lines[i])
+                except Exception as e:
+                    print("Error in converting loan format: ", e)
+                    status = 400
+                    continue
+
+    # This is for adding the deposit and withdrawal amount to the json
+    for i, line in enumerate(lines):
+        stored_line = line
+        is_withdraw, invalid = check_withdrawal(stored_line)
+
+        if invalid == -1:
+            continue
+
+        if lines[i] in loan_lines:
+            loan_lines.remove(lines[i])
+            continue
+
+        account = remove_last_digits(lines[i])
+        account = remove_date(account)
+        account_name = ' '.join(account.split())
+
+        if not is_withdraw:
+            try:
+                value = line.split(account)[-1].strip()
+                value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
+
+                key = None
+                for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                    if key is not None:
+                        break
+                    for i in v:
+                        if i in account_name:
+                            key = k
+                            break
+                if key is not None:
+                    deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(value)
+                else:
+                    deposit_json["OTHER AMOUNTS"].append(value)
+                    deposit_json["OTHER VENDORS"].append(account_name)
+            except Exception as e:
+                status = 400
+                print("Error in converting deposit format: ", e)
+                continue
+
+        else:
+            try:
+                value = line.split(account)[-1].strip()
+                value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
+
+                key = None
+                for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                    if key is not None:
+                        break
+                    for i in v:
+                        if i in account_name:
+                            key = k
+                            break
+                if key is not None:
+                    withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(value)
+                else:
+                    withdrawal_json["OTHER AMOUNTS"].append(value)
+                    withdrawal_json["OTHER VENDORS"].append(account_name)
+            except Exception as e:
+                status = 400
+                print("Error in converting withdrawal format: ", e)
+                continue
+
+    file.close()
+    convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
+    if convert_status == 200:
+        msg = "Conversion successful."
+        return status, msg
+    else:
+        msg = "Conversion failed."
+        return convert_status, msg
 
 # write a function to search for a keyword in the text file and return the float value after the keyword 
 # and also return the string in the next line    
@@ -273,7 +396,7 @@ def upload_file():
             to_convert_filename = os.path.join(UPLOAD_FOLDER, filename)
             pdf_to_text(to_convert_filename)
             output_file = to_convert_filename.split(slash)[-1].split(".pdf")[0] + ".xlsx"
-            ret, msg = convert_A(output_file)
+            ret, msg = convert_B(output_file)
             return render_template('download.html', filename=output_file)
         else:
             return "File not allowed."
