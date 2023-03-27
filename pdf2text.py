@@ -29,6 +29,34 @@ def pdf_to_text(input_file):
     os.system(cmd)
     # print(f"Text saved to tmp.txt.")
 
+def get_only_alphabets(line):
+    line_without_spaces = ' '.join(line.split())
+    line_without_spaces = line_without_spaces.replace(" ", "")
+    only_alphabets = "".join(char for char in line_without_spaces if char.isalpha())
+    return only_alphabets
+
+def remove_last_digits(line):
+    updated_line = line
+    space = 0
+    for ind in range(len(line)-1, 0, -1):
+        if space == 4:
+            break
+        if line[ind].isnumeric() or line[ind] == '.':
+            updated_line = line[:ind]
+        else:
+            space = space + 1
+    return updated_line
+
+def remove_date(line):
+    updated_line = line
+    for ind in range(len(line)):
+        if line[ind].isalpha():
+            break
+        if line[ind].isnumeric() or line[ind].isspace():
+            updated_line = updated_line[1:]
+    return updated_line
+
+
 # write a function to search for a keyword in the text file and return the float value after the keyword 
 # and also return the string in the next line    
 def convert_A(output_file):
@@ -41,6 +69,8 @@ def convert_A(output_file):
 
     deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
     withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+    loan_lines = []
 
     try:
         file = open("tmp.txt", 'r')
@@ -50,6 +80,29 @@ def convert_A(output_file):
 
     lines = file.readlines()
 
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        stored_line = line
+        updated_line = remove_last_digits(stored_line)
+        updated_line = remove_date(updated_line)
+
+        account_name = ' '.join(updated_line.split())
+        if account_name == '':
+            continue
+
+        for val in loan_list:
+            if val in account_name:
+                try:
+                    value = lines[i].split(account_name)[-1].strip()
+                    value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
+                    deposit_json["LOAN"].append(value)
+                    loan_lines.append(lines[i])
+                except Exception as e:
+                    print("Error in converting loan format: ", e)
+                    status = 400
+                    continue
+
+    # This is for adding the deposit and withdrawal amount to the json
     for i, line in enumerate(lines):
         check_paymentech = ' '.join(line.split())
         if check_paymentech.lower() == "account title: sunrise hospitality, llc":
@@ -60,11 +113,12 @@ def convert_A(output_file):
                 value = line.split(deposit_search_keyword)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
 
-                line_without_spaces = ' '.join(lines[i+1].split())
-                line_without_spaces = line_without_spaces.replace(" ", "")
-                only_alphabets = "".join(char for char in line_without_spaces if char.isalpha())
+                only_alphabets = get_only_alphabets(lines[i+1])
                 if only_alphabets == deposit_search_keyword:
                     next_line = only_alphabets
+                elif lines[i+1] in loan_lines:
+                    next_line = only_alphabets
+                    loan_lines.remove(lines[i+1])
                 else:
                     next_line = lines[i+1]
                     next_line = ' '.join(next_line.split())
@@ -91,9 +145,7 @@ def convert_A(output_file):
                 value = line.split(withdrawal_search_keyword)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
 
-                line_without_spaces = ' '.join(lines[i+1].split())
-                line_without_spaces = line_without_spaces.replace(" ", "")
-                only_alphabets = "".join(char for char in line_without_spaces if char.isalpha())
+                only_alphabets = get_only_alphabets(lines[i+1])
                 if only_alphabets == withdrawal_search_keyword:
                     next_line = only_alphabets
                 else:
@@ -231,18 +283,6 @@ def upload_file():
 def download(filename):
     print("in post download_file")
     return send_file(filename, as_attachment=True)
-#    return render_template('upload.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-# if __name__ == "__main__":
-#     # construct the argument parser and parse the arguments
-#     ap = argparse.ArgumentParser()
-#     ap.add_argument("-i", "--input", required=True, help="Path to the input PDF file")
-#     args = vars(ap.parse_args())
-
-#     # convert pdf to text
-#     pdf_to_text(args["input"])
-#     output_file = args["input"].split(".pdf")[0] + ".xlsx"
-#     status, msg = convert_A(output_file)
