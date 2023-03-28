@@ -6,7 +6,6 @@
             "DEPOSIT PAYMENTECH",
             "AC-PAYMENTECH-DEPOSIT",
             "Bank of America Deposit",
-            "SETTLEMENT DISCOVER NETWORK",
             "INTCHG ADJ FISERV MERCHANT",
             "MERCH DEP MERCHANT SERVICES",
             "MTOT DEP BANKCARD-1084",
@@ -34,10 +33,10 @@
         [
             "Trsf from VISHNU PATEL",
             "Transfer from x5429 to",
-            "Loan From Owner",
             "Transfer from x5522 to",
+            "Loan From Owner",
             "TRUIST ONLINE TRANSFER FROM ****9250",
-            "(Some Number) Business Banking Transfer From (Some Number)"
+            "Business Banking Transfer From"
         ],
         "AEX":
         [
@@ -59,7 +58,7 @@
         ],
         "EXPEDIA":
         [
-            "(Some Number) TRAVELSCAPE, LLC"
+            "TRAVELSCAPE, LLC"
         ],
         "OTHER AMOUNTS":[],
         "OTHER VENDORS":[]
