@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 import json
 from flask import Flask, render_template, request, redirect, url_for, send_file
@@ -65,6 +66,11 @@ def check_withdrawal(line):
     elif line[ind].isnumeric():
                 return False, 0
     return False, -1
+
+def get_account_name(line):
+    updated_line = remove_date(line)
+    updated_line = updated_line.split('     ')[0]
+    return updated_line
 
 def convert_B(output_file):
     status = 200
@@ -301,6 +307,104 @@ def convert_A(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
+def convert_C(output_file):
+    status = 200
+    try:
+        columns_json = read_json("columns.json")
+    except Exception as e:
+        status = 404
+        return status, "Error in reading columns.json file."
+
+    deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
+    withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+
+    try:
+        file = open("tmp.txt", 'r')
+    except FileNotFoundError:
+        status = 404
+        return status, "PDF to text converted file not found."
+
+    transaction_pattern = re.compile(r'\d+\.\d+') # This is for getting the transaction amount
+    lines = file.readlines()
+
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        line = line.replace(',', '')
+        match = transaction_pattern.search(line)
+        if not match:
+            continue
+
+        transaction_amount = match.group()
+        transaction_amount = float(transaction_amount)
+        print("transaction_amount", transaction_amount)
+
+        account_name = get_account_name(line)
+        print("account_name", account_name)
+
+        # next_line = ' '.join(line.split())
+        was_loan = False
+
+        for val in loan_list:
+            if val in account_name:
+                try:
+                    deposit_json["LOAN"].append(transaction_amount)
+                    was_loan = True
+                except Exception as e:
+                    print("Error in converting loan format: ", e)
+                    status = 400
+                    continue
+
+        if was_loan:
+            continue
+
+        if account_name == deposit_search_keyword:
+            match = transaction_pattern.search(lines[i+1])
+            if not match and lines[i+1] != '':
+                account_name = ' '.join(lines[i+1].split())
+
+            key = None
+            for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                deposit_json["OTHER AMOUNTS"].append(transaction_amount)
+                deposit_json["OTHER VENDORS"].append(account_name)
+
+        elif account_name == withdrawal_search_keyword:
+            match = transaction_pattern.search(lines[i+1])
+            if not match and lines[i+1] != '':
+                account_name = ' '.join(lines[i+1].split())
+
+            key = None
+            for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
+                withdrawal_json["OTHER VENDORS"].append(account_name)
+
+    file.close()
+    convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
+    if convert_status == 200:
+        msg = "Conversion successful."
+        return status, msg
+    else:
+        msg = "Conversion failed."
+        return convert_status, msg
+
 def json_to_excel(deposit_json, withdrawal_json, filename):
     try:
         df_deposit = pd.DataFrame.from_dict(deposit_json, orient='index').transpose()
@@ -396,7 +500,7 @@ def upload_file():
             to_convert_filename = os.path.join(UPLOAD_FOLDER, filename)
             pdf_to_text(to_convert_filename)
             output_file = to_convert_filename.split(slash)[-1].split(".pdf")[0] + ".xlsx"
-            ret, msg = convert_B(output_file)
+            ret, msg = convert_C(output_file)
             return render_template('download.html', filename=output_file)
         else:
             return "File not allowed."
