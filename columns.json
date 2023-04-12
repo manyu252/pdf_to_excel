@@ -22,7 +22,8 @@
         "CASH":
         [
             "DEPOSIT",
-            "Customer Deposit"
+            "Customer Deposit",
+            "Deposit"
         ],
         "CLC":
         [

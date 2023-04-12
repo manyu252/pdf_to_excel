@@ -72,7 +72,18 @@ def get_account_name(line):
     updated_line = updated_line.split('     ')[0]
     return updated_line
 
-def convert_B(output_file):
+# write a function to get the float value at the end of the string
+def get_float_value(line):
+    updated_line = remove_date(line)
+    updated_line = updated_line.split('     ')[-1]
+    updated_line = updated_line.replace(" ", "")
+    updated_line = updated_line.replace(",", "")
+    updated_line = updated_line.replace("(", "")
+    updated_line = updated_line.replace(")", "")
+    updated_line = updated_line.replace("-", "")
+    return float(updated_line)
+
+def convert_CIB(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -115,12 +126,35 @@ def convert_B(output_file):
                     status = 400
                     continue
 
+    is_deposit = False
+    is_withdrawal = False
+    date_check = re.compile(r'\b\d{1,2}\s*/\s*\d{1,2}\b')
+
     # This is for adding the deposit and withdrawal amount to the json
     for i, line in enumerate(lines):
-        stored_line = line
-        is_withdraw, invalid = check_withdrawal(stored_line)
+        if "CHECKS IN NUMBER ORDER" in line:
+            break
 
-        if invalid == -1:
+        if "Page" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+
+        if "DEPOSITS AND ADDITIONS" in line:
+            is_deposit = True
+            is_withdrawal = False
+            continue
+
+        if "CHECKS AND WITHDRAWALS" in line:
+            is_deposit = False
+            is_withdrawal = True
+            continue
+
+        if not is_deposit and not is_withdrawal:
+            continue
+
+        date_match = date_check.search(line)
+        if not date_match:
             continue
 
         if lines[i] in loan_lines:
@@ -131,7 +165,7 @@ def convert_B(output_file):
         account = remove_date(account)
         account_name = ' '.join(account.split())
 
-        if not is_withdraw:
+        if is_deposit:
             try:
                 value = line.split(account)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
@@ -154,7 +188,7 @@ def convert_B(output_file):
                 print("Error in converting deposit format: ", e)
                 continue
 
-        else:
+        elif is_withdrawal:
             try:
                 value = line.split(account)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
@@ -307,7 +341,7 @@ def convert_A(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
-def convert_C(output_file):
+def convert_DIP(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -337,10 +371,8 @@ def convert_C(output_file):
 
         transaction_amount = match.group()
         transaction_amount = float(transaction_amount)
-        print("transaction_amount", transaction_amount)
 
         account_name = get_account_name(line)
-        print("account_name", account_name)
 
         # next_line = ' '.join(line.split())
         was_loan = False
@@ -405,6 +437,204 @@ def convert_C(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
+def convert_TPS(output_file):
+    status = 200
+    try:
+        columns_json = read_json("columns.json")
+    except Exception as e:
+        status = 404
+        return status, "Error in reading columns.json file."
+
+    deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
+    withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+
+    try:
+        file = open("tmp.txt", 'r')
+    except FileNotFoundError:
+        status = 404
+        return status, "PDF to text converted file not found."
+
+    date_check = re.compile(r'\b\d{2}/\d{2}\b')
+
+    lines = file.readlines()
+    is_deposit = False
+    is_withdrawal = False
+    counts = 0
+
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        if "Deposits, credits and interest" in line:
+            counts += 1
+            if counts > 2:
+                is_deposit = True
+                is_withdrawal = False
+        elif "Other withdrawals, debits and service charges" in line:
+            counts += 1
+            if counts > 2:
+                is_withdrawal = True
+                is_deposit = False
+
+        if not is_deposit and not is_withdrawal:
+            continue
+
+        date_match = date_check.search(line)
+        if not date_match:
+            continue
+
+        line = line.replace(',', '')
+        transaction_amount = get_float_value(line)
+
+        account = remove_last_digits(lines[i])
+        account = remove_date(account)
+        account_name = ' '.join(account.split())
+
+        if is_deposit:
+            if "Total deposits, credits and interest" in line:
+                is_deposit = False
+                continue
+
+            key = None
+            for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                deposit_json["OTHER AMOUNTS"].append(transaction_amount)
+                deposit_json["OTHER VENDORS"].append(account_name)
+
+        elif is_withdrawal:
+            if "Total other withdrawals, debits and service charges" in line:
+                is_withdrawal = False
+                continue
+
+            key = None
+            for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
+                withdrawal_json["OTHER VENDORS"].append(account_name)
+
+    file.close()
+    convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
+    if convert_status == 200:
+        msg = "Conversion successful."
+        return status, msg
+    else:
+        msg = "Conversion failed."
+        return convert_status, msg
+
+# Function to convert HIP and SIB pdf types
+def convert_HIP(output_file):
+    status = 200
+    try:
+        columns_json = read_json("columns.json")
+    except Exception as e:
+        status = 404
+        return status, "Error in reading columns.json file."
+
+    deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
+    withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+
+    try:
+        file = open("tmp.txt", 'r')
+    except FileNotFoundError:
+        status = 404
+        return status, "PDF to text converted file not found."
+
+    transaction_pattern = re.compile(r'\d+\.\d+') # This is for getting the transaction amount
+    lines = file.readlines()
+    start = False
+
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        if "Balance Last Statement" in line:
+            start = True
+            continue
+        elif "Balance This Statement" in line:
+            start = False
+
+        if not start:
+            continue
+
+        if "Check #" in line:
+            continue
+
+        line = line.replace(',', '')
+        match = transaction_pattern.search(line)
+        if not match:
+            continue
+
+        transaction_amount = match.group()
+        transaction_start_loc = match.start()
+        transaction_end_loc = match.end()
+        transaction_amount = float(transaction_amount)
+
+        account_name = get_account_name(line)
+
+        is_deposit = False
+        is_withdrawal = False
+        fraction = transaction_end_loc / len(line)
+
+        if fraction >= 0.85:
+            is_deposit = True
+            is_withdrawal = False
+        elif fraction <= 0.85:
+            is_deposit = False
+            is_withdrawal = True
+
+        if is_deposit:
+            key = None
+            for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                deposit_json["OTHER AMOUNTS"].append(transaction_amount)
+                deposit_json["OTHER VENDORS"].append(account_name)
+
+        elif is_withdrawal:
+            key = None
+            for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
+                withdrawal_json["OTHER VENDORS"].append(account_name)
+
+    file.close()
+    convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
+    if convert_status == 200:
+        msg = "Conversion successful."
+        return status, msg
+    else:
+        msg = "Conversion failed."
+        return convert_status, msg
+
 def json_to_excel(deposit_json, withdrawal_json, filename):
     try:
         df_deposit = pd.DataFrame.from_dict(deposit_json, orient='index').transpose()
@@ -429,6 +659,7 @@ def json_to_excel(deposit_json, withdrawal_json, filename):
 
         return 200
     except Exception as e:
+        print("Error in converting json to excel: ", e)
         return 500, e
 
 # write a function to read a json file and create 2 dataframes from it
@@ -486,11 +717,13 @@ def home():
 def upload_file():
     if request.method == 'POST':
         # Check if a file was uploaded
-        print(request.files)
         if 'file' not in request.files:
             # return redirect(request.url)
             return "No file uploaded."
         file = request.files['file']
+        selected_option = request.form['option']
+        if selected_option == "Choose":
+            return "Choose a valid PDF type"
         # Check if the file has an allowed extension
         if file and allowed_file(file.filename):
             # Secure the filename to prevent any malicious activity
@@ -500,7 +733,14 @@ def upload_file():
             to_convert_filename = os.path.join(UPLOAD_FOLDER, filename)
             pdf_to_text(to_convert_filename)
             output_file = to_convert_filename.split(slash)[-1].split(".pdf")[0] + ".xlsx"
-            ret, msg = convert_C(output_file)
+            if selected_option == "HIP":
+                status, msg = convert_HIP(output_file)
+            elif selected_option == "DIP":
+                status, msg = convert_DIP(output_file)
+            elif selected_option == "CIB":
+                status, msg = convert_CIB(output_file)
+            elif selected_option == "TPS":
+                status, msg = convert_TPS(output_file)
             return render_template('download.html', filename=output_file)
         else:
             return "File not allowed."
@@ -508,7 +748,6 @@ def upload_file():
 
 @app.route('/download/<filename>')
 def download(filename):
-    print("in post download_file")
     return send_file(filename, as_attachment=True)
 
 if __name__ == '__main__':

@@ -6,6 +6,15 @@
 <body>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file"><br><br>
+        <label for="option">Select a PDF Type:</label>
+        <select id="option" name="option">
+            <option value="Choose">Choose</option>
+            <option value="HIP">HIP/SIB</option>
+            <option value="CIB">QIB/CIB</option>
+            <option value="DIP">DIP</option>
+            <option value="TPS">BWL/TPS</option>
+        </select>
+        <br><br>
         <input type="submit" value="Upload">
     </form>
     {% if filename %}
