@@ -126,12 +126,35 @@ def convert_CIB(output_file):
                     status = 400
                     continue
 
+    is_deposit = False
+    is_withdrawal = False
+    date_check = re.compile(r'\b\d{1,2}\s*/\s*\d{1,2}\b')
+
     # This is for adding the deposit and withdrawal amount to the json
     for i, line in enumerate(lines):
-        stored_line = line
-        is_withdraw, invalid = check_withdrawal(stored_line)
+        if "CHECKS IN NUMBER ORDER" in line:
+            break
 
-        if invalid == -1:
+        if "Page" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+
+        if "DEPOSITS AND ADDITIONS" in line:
+            is_deposit = True
+            is_withdrawal = False
+            continue
+
+        if "CHECKS AND WITHDRAWALS" in line:
+            is_deposit = False
+            is_withdrawal = True
+            continue
+
+        if not is_deposit and not is_withdrawal:
+            continue
+
+        date_match = date_check.search(line)
+        if not date_match:
             continue
 
         if lines[i] in loan_lines:
@@ -142,7 +165,7 @@ def convert_CIB(output_file):
         account = remove_date(account)
         account_name = ' '.join(account.split())
 
-        if not is_withdraw:
+        if is_deposit:
             try:
                 value = line.split(account)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
@@ -165,7 +188,7 @@ def convert_CIB(output_file):
                 print("Error in converting deposit format: ", e)
                 continue
 
-        else:
+        elif is_withdrawal:
             try:
                 value = line.split(account)[-1].strip()
                 value = float(''.join(ch for ch in value if ch.isdecimal() or ch == '.'))
