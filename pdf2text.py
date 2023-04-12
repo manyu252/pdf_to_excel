@@ -83,7 +83,7 @@ def get_float_value(line):
     updated_line = updated_line.replace("-", "")
     return float(updated_line)
 
-def convert_B(output_file):
+def convert_CIB(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -318,7 +318,7 @@ def convert_A(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
-def convert_C(output_file):
+def convert_DIP(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -414,7 +414,7 @@ def convert_C(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
-def convert_D(output_file):
+def convert_TPS(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -513,7 +513,8 @@ def convert_D(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
-def convert_E(output_file):
+# Function to convert HIP and SIB pdf types
+def convert_HIP(output_file):
     status = 200
     try:
         columns_json = read_json("columns.json")
@@ -563,11 +564,12 @@ def convert_E(output_file):
 
         is_deposit = False
         is_withdrawal = False
+        fraction = transaction_end_loc / len(line)
 
-        if transaction_start_loc > 120:
+        if fraction >= 0.85:
             is_deposit = True
             is_withdrawal = False
-        elif transaction_end_loc < 120:
+        elif fraction <= 0.85:
             is_deposit = False
             is_withdrawal = True
 
@@ -696,6 +698,9 @@ def upload_file():
             # return redirect(request.url)
             return "No file uploaded."
         file = request.files['file']
+        selected_option = request.form['option']
+        if selected_option == "Choose":
+            return "Choose a valid PDF type"
         # Check if the file has an allowed extension
         if file and allowed_file(file.filename):
             # Secure the filename to prevent any malicious activity
@@ -705,7 +710,14 @@ def upload_file():
             to_convert_filename = os.path.join(UPLOAD_FOLDER, filename)
             pdf_to_text(to_convert_filename)
             output_file = to_convert_filename.split(slash)[-1].split(".pdf")[0] + ".xlsx"
-            ret, msg = convert_E(output_file)
+            if selected_option == "HIP":
+                status, msg = convert_HIP(output_file)
+            elif selected_option == "DIP":
+                status, msg = convert_DIP(output_file)
+            elif selected_option == "CIB":
+                status, msg = convert_CIB(output_file)
+            elif selected_option == "TPS":
+                status, msg = convert_TPS(output_file)
             return render_template('download.html', filename=output_file)
         else:
             return "File not allowed."
