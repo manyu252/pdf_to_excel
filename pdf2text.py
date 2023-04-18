@@ -74,14 +74,18 @@ def get_account_name(line):
 
 # write a function to get the float value at the end of the string
 def get_float_value(line):
-    updated_line = remove_date(line)
-    updated_line = updated_line.split('     ')[-1]
-    updated_line = updated_line.replace(" ", "")
-    updated_line = updated_line.replace(",", "")
-    updated_line = updated_line.replace("(", "")
-    updated_line = updated_line.replace(")", "")
-    updated_line = updated_line.replace("-", "")
-    return float(updated_line)
+    try:
+        updated_line = remove_date(line)
+        updated_line = updated_line.split('     ')[-1]
+        updated_line = updated_line.replace(" ", "")
+        updated_line = updated_line.replace(",", "")
+        updated_line = updated_line.replace("(", "")
+        updated_line = updated_line.replace(")", "")
+        updated_line = updated_line.replace("-", "")
+        return float(updated_line)
+    except Exception as e:
+        print("Error in converting to float: ", e)
+        return None
 
 def convert_CIB(output_file):
     status = 200
@@ -484,6 +488,8 @@ def convert_TPS(output_file):
 
         line = line.replace(',', '')
         transaction_amount = get_float_value(line)
+        if transaction_amount is None:
+            continue
 
         account = remove_last_digits(lines[i])
         account = remove_date(account)
@@ -639,10 +645,14 @@ def json_to_excel(deposit_json, withdrawal_json, filename):
     try:
         df_deposit = pd.DataFrame.from_dict(deposit_json, orient='index').transpose()
         df_withdrawal = pd.DataFrame.from_dict(withdrawal_json, orient='index').transpose()
-        df_deposit.loc['TOTAL']= df_deposit.sum(skipna=True)
-        df_deposit.loc['TOTAL', df_deposit.columns[-1]] = None
-        df_withdrawal.loc['TOTAL']= df_withdrawal.sum(skipna=True)
-        df_withdrawal.loc['TOTAL', df_withdrawal.columns[-1]] = None
+
+        deposit_cols = list(deposit_json)
+        deposit_cols.remove("OTHER VENDORS")
+        withdrawal_cols = list(withdrawal_json)
+        withdrawal_cols.remove("OTHER VENDORS")
+
+        df_deposit.loc['TOTAL']= df_deposit[deposit_cols].sum(skipna=True)
+        df_withdrawal.loc['TOTAL']= df_withdrawal[withdrawal_cols].sum(skipna=True)
 
         deposit_sum = [sum(deposit_json[a]) for a in deposit_json.keys() if a != "OTHER VENDORS"]
         deposit_sum = sum(deposit_sum)
