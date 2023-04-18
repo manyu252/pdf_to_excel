@@ -87,6 +87,7 @@ def get_float_value(line):
         print("Error in converting to float: ", e)
         return None
 
+
 def convert_CIB(output_file):
     status = 200
     try:
