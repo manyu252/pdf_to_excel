@@ -87,6 +87,14 @@ def get_float_value(line):
         print("Error in converting to float: ", e)
         return None
 
+def read_converted_file():
+    try:
+        file = open("tmp.txt", 'r', encoding="utf8")
+        lines = file.readlines()
+        return lines
+    except FileNotFoundError:
+        status = 404
+        return None
 
 def convert_CIB(output_file):
     status = 200
@@ -101,13 +109,10 @@ def convert_CIB(output_file):
     loan_list = columns_json[deposit_search_keyword]["LOAN"]
     loan_lines = []
 
-    try:
-        file = open("tmp.txt", 'r')
-    except FileNotFoundError:
+    lines = read_converted_file()
+    if lines is None:
         status = 404
         return status, "PDF to text converted file not found."
-
-    lines = file.readlines()
 
     # This is for adding the loan amount to the deposit json
     for i, line in enumerate(lines):
@@ -216,7 +221,6 @@ def convert_CIB(output_file):
                 print("Error in converting withdrawal format: ", e)
                 continue
 
-    file.close()
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
@@ -240,13 +244,10 @@ def convert_A(output_file):
     loan_list = columns_json[deposit_search_keyword]["LOAN"]
     loan_lines = []
 
-    try:
-        file = open("tmp.txt", 'r')
-    except FileNotFoundError:
+    lines = read_converted_file()
+    if lines is None:
         status = 404
         return status, "PDF to text converted file not found."
-
-    lines = file.readlines()
 
     # This is for adding the loan amount to the deposit json
     for i, line in enumerate(lines):
@@ -337,7 +338,6 @@ def convert_A(output_file):
                 status = 400
                 continue
 
-    file.close()
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
@@ -358,14 +358,12 @@ def convert_DIP(output_file):
     withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
     loan_list = columns_json[deposit_search_keyword]["LOAN"]
 
-    try:
-        file = open("tmp.txt", 'r')
-    except FileNotFoundError:
+    lines = read_converted_file()
+    if lines is None:
         status = 404
         return status, "PDF to text converted file not found."
 
     transaction_pattern = re.compile(r'\d+\.\d+') # This is for getting the transaction amount
-    lines = file.readlines()
 
     # This is for adding the loan amount to the deposit json
     for i, line in enumerate(lines):
@@ -433,7 +431,6 @@ def convert_DIP(output_file):
                 withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
                 withdrawal_json["OTHER VENDORS"].append(account_name)
 
-    file.close()
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
@@ -454,15 +451,13 @@ def convert_TPS(output_file):
     withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
     loan_list = columns_json[deposit_search_keyword]["LOAN"]
 
-    try:
-        file = open("tmp.txt", 'r')
-    except FileNotFoundError:
+    lines = read_converted_file()
+    if lines is None:
         status = 404
         return status, "PDF to text converted file not found."
 
     date_check = re.compile(r'\b\d{2}/\d{2}\b')
 
-    lines = file.readlines()
     is_deposit = False
     is_withdrawal = False
     counts = 0
@@ -534,7 +529,6 @@ def convert_TPS(output_file):
                 withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
                 withdrawal_json["OTHER VENDORS"].append(account_name)
 
-    file.close()
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
@@ -556,14 +550,12 @@ def convert_HIP(output_file):
     withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
     loan_list = columns_json[deposit_search_keyword]["LOAN"]
 
-    try:
-        file = open("tmp.txt", 'r')
-    except FileNotFoundError:
+    lines = read_converted_file()
+    if lines is None:
         status = 404
         return status, "PDF to text converted file not found."
 
     transaction_pattern = re.compile(r'\d+\.\d+') # This is for getting the transaction amount
-    lines = file.readlines()
     start = False
 
     # This is for adding the loan amount to the deposit json
@@ -633,7 +625,6 @@ def convert_HIP(output_file):
                 withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
                 withdrawal_json["OTHER VENDORS"].append(account_name)
 
-    file.close()
     convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
     if convert_status == 200:
         msg = "Conversion successful."
