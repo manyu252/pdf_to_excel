@@ -537,6 +537,120 @@ def convert_TPS(output_file):
         msg = "Conversion failed."
         return convert_status, msg
 
+def convert_MIP(output_file):
+    status = 200
+    try:
+        columns_json = read_json("columns.json")
+    except Exception as e:
+        status = 404
+        return status, "Error in reading columns.json file."
+
+    deposit_json = {key: [] for key in columns_json[deposit_search_keyword].keys()}
+    withdrawal_json = {key: [] for key in columns_json[withdrawal_search_keyword].keys()}
+    loan_list = columns_json[deposit_search_keyword]["LOAN"]
+
+    lines = read_converted_file()
+    if lines is None:
+        status = 404
+        return status, "PDF to text converted file not found."
+
+    date_check = re.compile(r'\b\d{2}/\d{2}\b')
+
+    is_deposit = False
+    is_withdrawal = False
+    counts = 0
+
+    # This is for adding the loan amount to the deposit json
+    for i, line in enumerate(lines):
+        if "Page" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+        if "Checks" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+        if "Continued on Next Page" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+        if "Daily Balance Information" in line:
+            is_deposit = False
+            is_withdrawal = False
+            continue
+        if "Credits" in line:
+            counts += 1
+            if counts >= 2:
+                is_deposit = True
+                is_withdrawal = False
+        elif "Debits" in line:
+            counts += 1
+            if counts >= 2:
+                is_withdrawal = True
+                is_deposit = False
+
+        if not is_deposit and not is_withdrawal:
+            continue
+
+        date_match = date_check.search(line)
+        if not date_match:
+            continue
+
+        line = line.replace(',', '')
+        transaction_amount = get_float_value(line)
+        if transaction_amount is None:
+            continue
+
+        account = remove_last_digits(lines[i])
+        account = remove_date(account)
+        account_name = ' '.join(account.split())
+
+        if is_deposit:
+            # if "Total deposits, credits and interest" in line:
+            #     is_deposit = False
+            #     continue
+
+            key = None
+            for k, v in enumerate(list(columns_json[deposit_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                deposit_json[list(columns_json[deposit_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                deposit_json["OTHER AMOUNTS"].append(transaction_amount)
+                deposit_json["OTHER VENDORS"].append(account_name)
+
+        elif is_withdrawal:
+            if "Total other withdrawals, debits and service charges" in line:
+                is_withdrawal = False
+                continue
+
+            key = None
+            for k, v in enumerate(list(columns_json[withdrawal_search_keyword].values())):
+                if key is not None:
+                    break
+                for i in v:
+                    if i in account_name:
+                        key = k
+                        break
+            if key is not None:
+                withdrawal_json[list(columns_json[withdrawal_search_keyword].keys())[key]].append(transaction_amount)
+            else:
+                withdrawal_json["OTHER AMOUNTS"].append(transaction_amount)
+                withdrawal_json["OTHER VENDORS"].append(account_name)
+
+    convert_status = json_to_excel(deposit_json, withdrawal_json, output_file)
+    if convert_status == 200:
+        msg = "Conversion successful."
+        return status, msg
+    else:
+        msg = "Conversion failed."
+        return convert_status, msg
+
 # Function to convert HIP and SIB pdf types
 def convert_HIP(output_file):
     status = 200
@@ -743,6 +857,8 @@ def upload_file():
                 status, msg = convert_CIB(output_file)
             elif selected_option == "TPS":
                 status, msg = convert_TPS(output_file)
+            elif selected_option == "MIP":
+                status, msg = convert_MIP(output_file)
             return render_template('download.html', filename=output_file)
         else:
             return "File not allowed."
